@@ -1,22 +1,5 @@
 # Time Series Database
 
-## 0. Project Scaffolding & Virtual Lab
-**Build the Load Generator**
-* [ ] Create `tools/load_gen.cpp`.
-
-**Data Generator Class**:
-* [ ] `generateSineWave(base, amp, time)`: For temperature simulation.
-* [ ] `generateSawtooth(min, max, time)`: For simulating counters (e.g., bytes sent).
-
-**Thread Pool / Workers**:
-* [ ] Spawn  `std::thread` workers (simulate 100–1000 devices).
-* [ ] Use `std::chrono` to regulate send intervals (e.g., 100ms or 1s).
-
-**Throughput Counter**:
-* [ ] Use `std::atomic<int>` to count requests sent.
-* [ ] Print stats to console every second (`std::cout << "PPS: " << count << std::endl`).
-
-
 ## 1. In-Memory Ingestion (The Write Path)
 Focus on getting data from the generator into RAM safely.
 
