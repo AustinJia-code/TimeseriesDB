@@ -6,6 +6,7 @@
 #include <functional>
 #include <cstdio>
 #include <httplib.h>
+#include "types.h"
 
 /**
  * Class for device gen functions
@@ -25,7 +26,7 @@ public:
     /**
      * Custom endpoint (address:port)
      */
-    LoadGenerator (const std::string& address, int port) :
+    LoadGenerator (const std::string& address, id_t port) :
         address (address), port (port) {}
 
     /**
@@ -35,7 +36,7 @@ public:
      * period_ms: period
      * time_ms: current time ms
      */
-    double getSineWave (double base, double amplitude, time_t period_ms, time_t time_ms)
+    data_t getSineWave (data_t base, data_t amplitude, time_t period_ms, time_t time_ms)
     {
         return base + amplitude * std::sin ((2.0 * M_PI * time_ms) / period_ms);
     }
@@ -47,7 +48,7 @@ public:
      * period_ms: time from min to max
      * time_ms: current time ms
      */
-    double getSawtooth (double min, double max, time_t period_ms, time_t time_ms)
+    data_t getSawtooth (data_t min, data_t max, time_t period_ms, time_t time_ms)
     {
         return min + (std::fmod (time_ms, period_ms) * (max - min) / period_ms);
     }
@@ -57,8 +58,8 @@ public:
      * device_id: device id for current device
      * total_count: shared counter for number of data points output by devices
      */
-    void startWorker (int device_id, int rate_ms, std::atomic<int>& total_count,
-                      std::function<double (time_t)> generatorFunc)
+    void startWorker (id_t device_id, time_t rate_ms, std::atomic<count_t>& total_count,
+                      std::function<data_t (time_t)> generatorFunc)
     {
         while (true)
         {
@@ -67,7 +68,7 @@ public:
             const time_t now_ms = std::chrono::duration_cast<std::chrono::milliseconds> 
                                 (now.time_since_epoch ()).count ();
 
-            double data = generatorFunc (now_ms);
+            data_t data = generatorFunc (now_ms);
             
             // Post
             std::string payload = std::to_string (device_id) + "," +
@@ -93,7 +94,7 @@ public:
 int main ()
 {
     LoadGenerator lg;
-    std::atomic<int> total_count (0);
+    std::atomic<count_t> total_count (0);
     std::vector<std::thread> threads;
 
     // Sine data (temperature, sound)
@@ -117,7 +118,7 @@ int main ()
         while (true)
         {
             std::this_thread::sleep_for (std::chrono::seconds (1));
-            std::printf ("PPS: %d\n", total_count.exchange (0));
+            std::printf ("PPS: %ld\n", total_count.exchange (0));
         }
     });
 

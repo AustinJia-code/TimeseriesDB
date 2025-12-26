@@ -1,9 +1,12 @@
+#pragma once
+
 #include <map>
 #include <vector>
 #include <string>
 #include <shared_mutex>
 #include <iostream>
 #include <mutex>
+#include "types.h"
 
 /**
  * Single unit of timeseries data
@@ -11,7 +14,7 @@
 struct Data
 {
     time_t time_ms;
-    double value;
+    data_t value;
 };
 
 /**
@@ -27,22 +30,22 @@ public:
     /**
      * Insert data into the MemTable
      */
-    void insert (const std::string& metric, time_t time_ms, double val)
+    void insert (const std::string& tag, time_t time_ms, data_t val)
     {
         // Single writer
         std::unique_lock lock (mutex);
-        table[metric].push_back (Data {time_ms, val});
+        table[tag].push_back (Data {time_ms, val});
     }
 
     /**
-     * Get number of datapoints for metric
+     * Get number of datapoints for tag
      */
-    size_t get_count (const std::string& metric)
+    size_t get_count (const std::string& tag)
     {
         // Multi reader
         std::shared_lock lock (mutex);
-        if (table.find (metric) != table.end ())
-            return table[metric].size ();
+        if (table.find (tag) != table.end ())
+            return table[tag].size ();
         
         return 0;
     }
@@ -54,9 +57,9 @@ public:
     {
         std::stringstream ss;
         std::shared_lock lock (mutex);
-        for (const auto& [metric, data] : table)
+        for (const auto& [tag, data] : table)
         {
-            out << "Metric:" << metric 
+            out << "tag:" << tag 
                 << " | Count: " << data.size ()
                 << std::endl;
         }

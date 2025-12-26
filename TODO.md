@@ -1,33 +1,5 @@
 # Time Series Database
 
-## 1. In-Memory Ingestion (The Write Path)
-Focus on getting data from the generator into RAM safely.
-
-**Define Data Structures (`include/types.h`)**
-* [ ] Create struct `DataPoint`:
-    ```cpp
-    struct DataPoint {
-        int64_t timestamp;
-        double value;
-        // For simplicity, handle tags separately or as a fixed ID initially
-    };
-    ```
-* [ ] Create struct `TimeSeries`:
-* [ ] Contains `std::string metric_name` and `std::vector<DataPoint> points`.
-
-**Implement the MemTable**
-* [ ] Create class `MemTable`.
-* [ ] Use `std::unordered_map<std::string, std::vector<DataPoint>>` as the primary store.
-* [ ] Implement `insert(string key, DataPoint dp)`.
-
-**Concurrency:** 
-* [ ] Add `std::mutex` or `std::shared_mutex` to protect the map during writes.
-
-**Network Interface (Ingestion Server)**
-* [ ] Use `sys/socket.h` to write a raw TCP server.
-* [ ] Parse incoming JSON (or binary) packets and call `MemTable.insert()`.
-
-
 ## 2. Durability (Write Ahead Log)
 Ensure data survives a crash.
 

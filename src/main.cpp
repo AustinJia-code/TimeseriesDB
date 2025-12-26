@@ -1,16 +1,14 @@
 #include <httplib.h>
 #include <iostream>
 #include "memtable.h"
+#include "wal.h"
 #include <sstream>
 
 /**
- * Main server
+ * Init db server endpoint
  */
-int main ()
+bool init_endpoint (httplib::Server& server, MemTable& mem_db, WAL& wal)
 {
-    httplib::Server server;
-    MemTable mem_db;
-
     // Build endpoint
     server.Post ("/write", [&] (const httplib::Request& req, httplib::Response& res)
     {
@@ -25,15 +23,28 @@ int main ()
             res.status = httplib::StatusCode::BadRequest_400;
         else
         {
-            std::string metric = "device_" + parts[0];
+            // Parse package
+            std::string tag = "device_" + parts[0];
             time_t time_ms = std::stoll (parts[1]);
-            double val = std::stod (parts[2]);
+            data_t val = std::stod (parts[2]);
 
-            mem_db.insert (metric, time_ms, val);
+            // Write to disk for durability
+            wal.append (tag, time_ms, val);
+            
+            // Write to memory for availability
+            mem_db.insert (tag, time_ms, val);
             res.set_content ("OK", "text/plain");
         }
     });
 
+    return EXIT_SUCCESS;
+}
+
+/**
+ * Start server
+ */
+bool start_server (httplib::Server& server, MemTable& mem_db)
+{
     // Debug route
     std::thread debug_thread ([&mem_db, &server] ()
     {
@@ -54,7 +65,31 @@ int main ()
         return EXIT_FAILURE;
     }
     std::cout << "TimeseriesDB started at http://0.0.0.0:9090" << std::endl;
+
+    return EXIT_SUCCESS;
+}
+
+/**
+ * Main server
+ */
+int main ()
+{
+    httplib::Server server;
+    MemTable mem_db;
+    WAL wal ("../disk/data.wal");
+    wal.recover (mem_db);
+
+    if (init_endpoint (server, mem_db, wal) == EXIT_FAILURE)
+    {   
+        std::cerr << "Failed to initialize endpoint" << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    if (!start_server (server, mem_db) == EXIT_FAILURE)
+    {
+        std::cerr << "Failed to start server" << std::endl;
+        return EXIT_FAILURE;
+    }
         
-    // Exit
     return EXIT_SUCCESS;
 }
