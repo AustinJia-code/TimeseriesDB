@@ -1,24 +1,5 @@
 # Time Series Database
 
-## 2. Durability (Write Ahead Log)
-Ensure data survives a crash.
-
-**Implement WAL Writer**
-* [ ] Create class `WAL`.
-* [ ] On init: `std::ofstream log_file("wal.log", std::ios::binary | std::ios::app);`.
-* [ ] Implement `append(string key, DataPoint dp)`.
-* [ ] Use `reinterpret_cast` to write raw bytes (timestamp + value) to the stream. Don't use text/JSON!
-* [ ] Call `log_file.flush()` (or rely on OS buffers if optimizing for speed).
-
-**Implement WAL Replayer**
-* [ ] Implement `recover()` method.
-* [ ] Read `wal.log` from start to finish on startup.
-* [ ] Re-insert parsed data back into the `MemTable`.
-
-**Integration Test**
-* [ ] Start DB -> Run Load Gen -> Kill DB (CTRL+C) -> Restart DB -> Verify count of points in RAM.
-
-
 ## 3. Storage Engine (SSTables)
 Move data from RAM to Disk efficiently.
 

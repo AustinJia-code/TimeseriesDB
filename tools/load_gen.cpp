@@ -58,7 +58,7 @@ public:
      * device_id: device id for current device
      * total_count: shared counter for number of data points output by devices
      */
-    void startWorker (id_t device_id, time_t rate_ms, std::atomic<count_t>& total_count,
+    void startWorker (id_t device_id, time_t rate_ms, std::atomic<size_t>& total_count,
                       std::function<data_t (time_t)> generatorFunc)
     {
         while (true)
@@ -94,23 +94,36 @@ public:
 int main ()
 {
     LoadGenerator lg;
-    std::atomic<count_t> total_count (0);
+    std::atomic<size_t> total_count (0);
     std::vector<std::thread> threads;
 
     // Sine data (temperature, sound)
     threads.emplace_back ([&] () {
-        lg.startWorker (1, 100, total_count, [&](time_t t) {
-            return lg.getSineWave (25.0, 5.0, 60000, t); }); });
-    
+        lg.startWorker (id_t {1},
+                        time_t {1},
+                        total_count,
+                        [&](time_t t) {
+                            return lg.getSineWave (data_t {25.0},
+                                                   data_t {5.0},
+                                                   time_t {60000},
+                                                   t);});});
     // Sawtooth data (counter, encoder)
     threads.emplace_back ([&] () {
-        lg.startWorker (2, 100, total_count, [&](time_t t) {
-            return lg.getSineWave (25.0, 5.0, 60000, t); }); });
-    
+        lg.startWorker (id_t {2},
+                        time_t {2},
+                        total_count,
+                        [&](time_t t) {
+                            return lg.getSawtooth (data_t {2.0},
+                                                   data_t {19.0},
+                                                   time_t {4000},
+                                                   t);});});
     // Random noise
     threads.emplace_back ([&] () {
-        lg.startWorker (3, 100, total_count, [&](time_t unused) {
-            return static_cast<double> (rand () % 10); }); });
+        lg.startWorker (id_t {3},
+                        time_t {3},
+                        total_count,
+                        [&](time_t unused) {
+                            return static_cast<double> (rand () % 10);});});
 
     // Reporter
     std::thread reporter ([&] ()

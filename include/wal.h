@@ -55,7 +55,7 @@ public:
     /**
      * Recover WAL into mem_db
      */
-    void recover (MemTable& mem_db)
+    void recover (MemTable& mem_db) const
     {
         std::ifstream reader (path);
         if (!reader)
@@ -94,6 +94,21 @@ public:
         }
 
         std::cout << "Recovered data from " << path << std::endl;
+    }
+
+    /**
+     * Reset WAL to empty
+     */
+    void reset ()
+    {
+        std::lock_guard<std::mutex> lock (write_lock);
+        if (file.is_open ())
+            file.close ();
+        
+        file.open (path, std::ios::binary | std::ios::out | std::ios::trunc);
+
+        if (!file.is_open ())
+            std::cerr << "Failed to reset WAL" << std::endl;
     }
 
     /**
