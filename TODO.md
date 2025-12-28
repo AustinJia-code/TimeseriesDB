@@ -1,24 +1,5 @@
 # Time Series Database
 
-## 3. Storage Engine (SSTables)
-Move data from RAM to Disk efficiently.
-
-**Implement Flush Logic**
-* [ ] Monitor `MemTable` size (e.g., when vector size > 10,000 points).
-
-**Snapshoting:**
-* [ ] Move the current `std::vector` to a "Immutable MemTable" and start a new fresh vector for writes.
-
-**Sorting:**
-* [ ] Sort the immutable vector by timestamp:
-
-**File Format Design**
-* [ ] Write a Header (Magic Number `TSDB`, Version).
-* [ ] Write the Data Block (Sequential binary dump of sorted points).
-* [ ] Write a Footer (Offset to the index, checksum).
-* [ ] Use `std::filesystem` to name files uniquely (e.g., `timestamp_segment.tsm`).
-
-
 ## 4. Compression (Gorilla Algorithm)
 Implement bit-packing in C++.
 

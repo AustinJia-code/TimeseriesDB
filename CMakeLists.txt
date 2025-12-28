@@ -13,7 +13,7 @@ add_executable (load_gen tools/load_gen.cpp)
 target_link_libraries(load_gen PRIVATE Threads::Threads)
 
 # DB exe
-add_executable (tsdb_server src/main.cpp)
+add_executable (tsdb_server src/tsdb_server.cpp)
 target_link_libraries (tsdb_server PRIVATE Threads::Threads)
 
 # Compiler optimizations for high-throughput testing
