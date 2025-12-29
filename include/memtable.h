@@ -8,6 +8,8 @@
 #include <mutex>
 #include <fstream>
 #include "types.h"
+#include "bit_buffer.h"
+#include "gorilla.h"
 
 /**
  * Thread-safe memory storage
@@ -65,32 +67,55 @@ public:
 
         return snapshot;
     }
+    
+    /**
+     * Get data corresponding to tag
+     */
+    std::vector<Data> get_data (const std::string& tag) const
+    {
+        std::vector<Data> result {table.at (tag)};
+        return result;
+    }
 
     /**
      * Flush table to disk (Sorted String Table), timestamp sorted
+     * Not thread-safe, pass in extracted MemTable!
      */
     void flush (const table_t& d_table, id_t batch_id) const
     {
+        Gorilla gorilla;
         std::string path = "../disk/sstables/sstable_" + std::to_string (batch_id) + ".db";
         std::ofstream out (path, std::ios::binary);
 
         for (const auto& [tag, data] : d_table)
         {
+            if (data.empty ())
+                continue;
+            
+            BitWriter writer;
+            gorilla.encode (data, writer);
+            writer.flush ();
+
             // Write tag
             size_t tag_len = tag.size ();
-            out.write (reinterpret_cast <const char*> (&tag_len), sizeof (tag_len));
-            out.write (tag.c_str (), tag_len);
+            out.write (reinterpret_cast<const char*>(&tag_len), sizeof (tag_len));
+            out.write (tag.data (), tag_len);
 
-            // Write number of data points for this tag
-            size_t num_points = data.size ();
-            out.write (reinterpret_cast<const char*> (&num_points), sizeof (num_points));
+            // Write num points
+            size_t num_pts = data.size ();
+            out.write (reinterpret_cast<const char*> (&num_pts), sizeof (num_pts));
 
-            // Write data
-            for (const Data& d : data)
-            {
-                out.write (reinterpret_cast<const char*> (&d.time_ms), sizeof (d.time_ms));
-                out.write (reinterpret_cast<const char*> (&d.value), sizeof (d.value));
-            }
+            // Write size
+            const std::vector<byte_t>& compressed_buf = writer.get_buffer ();
+            size_t compressed_bytes = compressed_buf.size ();
+            out.write (reinterpret_cast<const char*> (&compressed_bytes), sizeof (compressed_bytes));
+
+            // Write gorilla
+            out.write (reinterpret_cast<const char*> (&compressed_bytes), sizeof (compressed_bytes));
+
+            size_t raw_size = num_pts * sizeof (data);
+            double ratio = (static_cast<double> (compressed_bytes) / raw_size) * 100.0;
+            std::cout << "[Flush] Tag: " << tag << " Ratio: " << ratio << "%" << std::endl;
         }
 
         out.close ();
@@ -99,7 +124,7 @@ public:
     /**
      * Get content overview
      */
-    void print (std::ostream& out = std::cout)
+    void print (std::ostream& out = std::cout) const
     {
         std::stringstream ss;
         std::shared_lock lock (mutex);

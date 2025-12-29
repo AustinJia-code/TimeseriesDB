@@ -1,4 +1,4 @@
-#include <httplib.h>
+#include "httplib.h"
 #include <iostream>
 #include "memtable.h"
 #include "wal.h"
@@ -36,6 +36,8 @@ private:
     httplib::Server server;
     MemTable mem_db;
     WAL wal;
+    
+    std::atomic<size_t> batch_id;
 
     std::atomic<bool> running {true};
     std::thread debug_thread;
@@ -46,14 +48,16 @@ private:
      */
     void start_debug_thread ()
     {
+        std::cout << "\033[H\033[J" << "=== LIVE CONSOLE ===\n";
+
         debug_thread = std::thread ([this] ()
         {
             while (running.load ())
             {
                 std::this_thread::sleep_for (std::chrono::seconds (1));
                 // Clear terminal and print to your screen
-                std::cout << "\033[H\033[J" << "=== LIVE CONSOLE ===\n";
                 mem_db.print ();
+                std::cout << std::endl;
             }
         });
 
@@ -67,7 +71,6 @@ private:
     {
         flush_thread = std::thread ([this] ()
         {
-            std::atomic<size_t> batch_id = get_next_batch_id ("../disk/sstables");
             while (running.load ())
             {
                 // flush at ~1MB
@@ -90,11 +93,54 @@ private:
         std::cout << "Flusher Initialized" << std::endl;
     }
 
+    /**
+     * Search an sstable for tag
+     */
+    std::vector<Data> search_sstable (const std::string& path, const std::string& tag) const
+    {
+        std::ifstream in (path, std::ios::binary);
+
+        while (in.peek () != EOF)
+        {
+            // Read tag
+            size_t tag_len;
+            in.read (reinterpret_cast<char*> (&tag_len), sizeof (tag_len));
+            std::string cur_tag (tag_len, ' ');
+            in.read (&cur_tag[0], tag_len);
+
+            // Read # points
+            size_t num_pts;
+            in.read (reinterpret_cast<char*> (&num_pts), sizeof (num_pts));
+
+            // Read size
+            size_t comp_size;
+            in.read (reinterpret_cast<char*> (&comp_size), sizeof (comp_size));
+
+            // If found tag, read all points into result
+            if (cur_tag == tag)
+            {
+                std::vector<byte_t> compressed_data (comp_size);
+                in.read (reinterpret_cast<char*> (compressed_data.data ()), comp_size);
+
+                Gorilla gorilla;
+                return gorilla.decode (compressed_data, num_pts);
+            }
+            else
+            {
+                // Jump over this block to next tag
+                in.seekg (comp_size, std::ios::cur);
+            }
+        }
+
+        return {};
+    }
+
 public:
     /**
      * Default constructor
      */
-    TSDBServer () : server (), mem_db (), wal ("../disk/data.wal")
+    TSDBServer () : server (), mem_db (), wal ("../disk/data.wal"),
+                    batch_id {get_next_batch_id ("../disk/sstables")}
     {
         wal.recover (mem_db);
     }
@@ -104,7 +150,7 @@ public:
      */
     bool init_endpoint ()
     {
-        // Build endpoint
+        // Build write endpoint
         server.Post ("/write", [&] (const httplib::Request& req, 
                                           httplib::Response& res)
         {
@@ -131,6 +177,44 @@ public:
                 mem_db.insert (tag, time_ms, val);
                 res.set_content ("OK", "text/plain");
             }
+        });
+
+        // Build read endpoint
+        server.Get ("/read", [&] (const httplib::Request& req, 
+                                        httplib::Response& res)
+        {
+            // TODO: start and end time
+            std::string tag = req.get_param_value ("tag");
+            std::vector<Data> results = mem_db.get_data (tag);
+
+            // Scan all files from db (TODO: optimize)
+            for (int i = 0; i < batch_id.load (); ++i)
+            {
+                std::string path = "../disk/sstable_" + std::to_string (i) + ".db";
+                std::vector<Data> disk_data = search_sstable (path, tag);
+                results.insert (results.end (), disk_data.begin (), disk_data.end ());
+            }
+
+            // Format as json
+            std::ostringstream oss;
+            oss << "[\n";
+            
+            for (size_t i = 0; i < results.size (); ++i)
+            {
+                oss << "    {\"ts\": " << results[i].time_ms << ",\n"
+                    << "    \"val\": " << std::fixed << std::setprecision (2) << results[i].value
+                    << "    }";
+                
+                // Don't add a comma after the last element
+                if (i < results.size() - 1)
+                    oss << ",";
+
+                oss << "\n";
+            }
+            
+            oss << "]";
+            
+            res.set_content (oss.str (), "application/json");
         });
 
         return EXIT_SUCCESS;

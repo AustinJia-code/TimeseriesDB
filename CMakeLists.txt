@@ -16,6 +16,9 @@ target_link_libraries(load_gen PRIVATE Threads::Threads)
 add_executable (tsdb_server src/tsdb_server.cpp)
 target_link_libraries (tsdb_server PRIVATE Threads::Threads)
 
+# Unit test exe
+add_executable (unit_tests tests/unit_tests.cpp)
+
 # Compiler optimizations for high-throughput testing
 if (MSVC)
     target_compile_options (load_gen PRIVATE /W4 /O2)

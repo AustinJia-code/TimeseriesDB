@@ -75,7 +75,7 @@ public:
                                   std::to_string (now_ms) + "," +
                                   std::to_string (data);
             httplib::Client client (address, port);
-            httplib::Result res = client.Post("/write", payload, "text/plain");
+            httplib::Result res = client.Post ("/write", payload, "text/plain");
 
             if (res && res->status == httplib::StatusCode::OK_200)
                 ++total_count;
