@@ -1,11 +1,14 @@
-# TODO:
+### TODO:
 * Benchmarking
 * Visualization
 * More unit tests
 * Writeup
 
-# Maybe TODO:
+### Maybe DO:
 * Compacting
 * Bloom filter
-* More comprehensive retrieval API
+* More comprehensive API
+    * Better retrieval
+    * /clear
+* Generalizable file paths
 * Further optimization

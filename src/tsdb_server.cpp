@@ -190,7 +190,7 @@ public:
             // Scan all files from db (TODO: optimize)
             for (int i = 0; i < batch_id.load (); ++i)
             {
-                std::string path = "../disk/sstable_" + std::to_string (i) + ".db";
+                std::string path = "../disk/sstables/sstable_" + std::to_string (i) + ".db";
                 std::vector<Data> disk_data = search_sstable (path, tag);
                 results.insert (results.end (), disk_data.begin (), disk_data.end ());
             }
