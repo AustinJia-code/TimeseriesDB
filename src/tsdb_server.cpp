@@ -154,6 +154,8 @@ public:
         server.Post ("/write", [&] (const httplib::Request& req, 
                                           httplib::Response& res)
         {
+            res.set_header("Access-Control-Allow-Origin", "*");
+            
             std::stringstream package (req.body);
             std::string part;
             std::vector<std::string> parts;
@@ -183,6 +185,8 @@ public:
         server.Get ("/read", [&] (const httplib::Request& req, 
                                         httplib::Response& res)
         {
+            res.set_header("Access-Control-Allow-Origin", "*");
+
             // TODO: start and end time
             std::string tag = req.get_param_value ("tag");
             std::vector<Data> results = mem_db.get_data (tag);

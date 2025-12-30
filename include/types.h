@@ -8,6 +8,7 @@
 using id_t      = uint32_t;
 using data_t    = double;
 using byte_t    = uint8_t;
+
 /**
  * Single unit of timeseries data
  */
@@ -16,7 +17,7 @@ struct Data
     time_t time_ms;
     data_t value;
 
-    void print (std::ostream& os = std::cout)
+    void print (std::ostream& os = std::cout) const
     {
         os << "Time: " << time_ms << "\n"
            << "Value: " << value << std::endl;
