@@ -36,7 +36,7 @@ public:
      * period_ms: period
      * time_ms: current time ms
      */
-    data_t getSineWave (data_t base, data_t amplitude, time_t period_ms, time_t time_ms)
+    data_t get_sine_wave (data_t base, data_t amplitude, time_t period_ms, time_t time_ms)
     {
         return base + amplitude * std::sin ((2.0 * M_PI * time_ms) / period_ms);
     }
@@ -48,7 +48,7 @@ public:
      * period_ms: time from min to max
      * time_ms: current time ms
      */
-    data_t getSawtooth (data_t min, data_t max, time_t period_ms, time_t time_ms)
+    data_t get_sawtooth (data_t min, data_t max, time_t period_ms, time_t time_ms)
     {
         return min + (std::fmod (time_ms, period_ms) * (max - min) / period_ms);
     }
@@ -58,17 +58,17 @@ public:
      * device_id: device id for current device
      * total_count: shared counter for number of data points output by devices
      */
-    void startWorker (id_t device_id, time_t rate_ms, std::atomic<size_t>& total_count,
-                      std::function<data_t (time_t)> generatorFunc)
+    void start_worker (id_t device_id, time_t rate_ms, std::atomic<size_t>& total_count,
+                       std::function<data_t (time_t)> generator_func)
     {
         while (true)
         {
             // Get data
             const auto now = std::chrono::system_clock::now ();
             const time_t now_ms = std::chrono::duration_cast<std::chrono::milliseconds> 
-                                (now.time_since_epoch ()).count ();
+                                  (now.time_since_epoch ()).count ();
 
-            data_t data = generatorFunc (now_ms);
+            data_t data = generator_func (now_ms);
             
             // Post
             std::string payload = std::to_string (device_id) + "," +
@@ -99,27 +99,27 @@ int main ()
 
     // Sine data (temperature, sound)
     threads.emplace_back ([&] () {
-        lg.startWorker (id_t {1},
+        lg.start_worker (id_t {1},
                         time_t {1},
                         total_count,
                         [&](time_t t) {
-                            return lg.getSineWave (data_t {25.0},
-                                                   data_t {5.0},
-                                                   time_t {60000},
-                                                   t);});});
+                            return lg.get_sine_wave (data_t {25.0},
+                                                     data_t {5.0},
+                                                     time_t {60000},
+                                                     t);});});
     // Sawtooth data (counter, encoder)
     threads.emplace_back ([&] () {
-        lg.startWorker (id_t {2},
+        lg.start_worker (id_t {2},
                         time_t {2},
                         total_count,
                         [&](time_t t) {
-                            return lg.getSawtooth (data_t {2.0},
-                                                   data_t {19.0},
-                                                   time_t {4000},
-                                                   t);});});
+                            return lg.get_sawtooth (data_t {2.0},
+                                                    data_t {19.0},
+                                                    time_t {4000},
+                                                    t);});});
     // Random noise
     threads.emplace_back ([&] () {
-        lg.startWorker (id_t {3},
+        lg.start_worker (id_t {3},
                         time_t {3},
                         total_count,
                         [&](time_t unused) {

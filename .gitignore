@@ -1,1 +1,3 @@
 /build
+/disk/data.wal
+/disk/sstables/*.db
