@@ -10,6 +10,7 @@
 #include "types.h"
 #include "bit_buffer.h"
 #include "gorilla.h"
+#include "tsdb_config.h"
 
 /**
  * Thread-safe memory storage
@@ -84,7 +85,7 @@ public:
     void flush (const table_t& d_table, id_t batch_id) const
     {
         Gorilla gorilla;
-        std::string path = "../disk/sstables/sstable_" + std::to_string (batch_id) + ".db";
+        std::string path = get_sstable_path (std::to_string (batch_id));
         std::ofstream out (path, std::ios::binary);
 
         for (const auto& [tag, data] : d_table)
@@ -115,9 +116,15 @@ public:
 
             size_t raw_size = num_pts * sizeof (data);
             double ratio = (static_cast<double> (compressed_bytes) / raw_size) * 100.0;
-            std::cout << "[Flush] Tag: " << tag << " Ratio: " << ratio << "%" << std::endl;
+            
+            if (debug)
+                std::cout << "[Flush] Tag: " << tag <<
+                             " Ratio: " << ratio << "%" << std::endl;
         }
 
+        if (debug)
+            std::cout << std::endl;
+            
         out.close ();
     }
 

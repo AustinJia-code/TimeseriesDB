@@ -5,6 +5,7 @@
 #include <mutex>
 #include "memtable.h"
 #include "types.h"
+#include "tsdb_config.h"
 
 /**
  * Write ahead log for memtable persistence
@@ -20,7 +21,7 @@ public:
     /**
      * Open path as binary append mode
      */
-    WAL (const std::string& path) : path (path)
+    WAL (const std::string& path = wal_path) : path (path)
     {
         file.open (path, std::ios::binary | std::ios::app);
         
@@ -93,7 +94,8 @@ public:
             mem_db.insert (tag, time_ms, val);
         }
 
-        std::cout << "Recovered data from " << path << std::endl;
+        if (debug)
+            std::cout << "Recovered data from " << path << std::endl;
     }
 
     /**

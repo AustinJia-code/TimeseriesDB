@@ -9,6 +9,5 @@
 * Bloom filter
 * More comprehensive API
     * Better retrieval
-    * /clear
 * Generalizable file paths
 * Further optimization

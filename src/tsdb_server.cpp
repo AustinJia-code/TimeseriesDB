@@ -6,11 +6,12 @@
 #include <filesystem>
 #include <regex>
 #include "types.h"
+#include "tsdb_config.h"
 
 /**
  * Get next batch id to write
  */
-size_t get_next_batch_id (const std::string& dir)
+size_t get_next_batch_id (const std::string& dir = sstable_dir)
 {
     size_t max_id = 0;
     std::regex re ("sstable_(\\d+)\\.db");
@@ -74,7 +75,7 @@ private:
             while (running.load ())
             {
                 // flush at ~1MB
-                if ((mem_db.get_total_count () * sizeof (Data)) < (1 << 20))
+                if ((mem_db.get_total_count () * sizeof (Data)) < memtable_bytes)
                 {
                     std::this_thread::sleep_for (std::chrono::milliseconds {100});
                     continue;
@@ -83,14 +84,16 @@ private:
                 table_t data = mem_db.extract ();
                 size_t cur_id = batch_id.fetch_add (1);
 
-                std::cout << "Flushing batch " << cur_id << "..." << std::endl;
+                if (debug)
+                    std::cout << "Flushing batch " << cur_id << "..." << std::endl;
 
                 mem_db.flush (data, cur_id);
                 wal.reset ();
             }
         });
 
-        std::cout << "Flusher Initialized" << std::endl;
+        if (debug)
+            std::cout << "Flusher Initialized" << std::endl;
     }
 
     /**
@@ -139,8 +142,8 @@ public:
     /**
      * Default constructor
      */
-    TSDBServer () : server (), mem_db (), wal ("../disk/data.wal"),
-                    batch_id {get_next_batch_id ("../disk/sstables")}
+    TSDBServer () : server (), mem_db (), wal (),
+                    batch_id {get_next_batch_id ()}
     {
         wal.recover (mem_db);
     }
@@ -194,7 +197,7 @@ public:
             // Scan all files from db (TODO: optimize)
             for (int i = 0; i < batch_id.load (); ++i)
             {
-                std::string path = "../disk/sstables/sstable_" + std::to_string (i) + ".db";
+                std::string path = get_sstable_path (std::to_string (i));
                 std::vector<Data> disk_data = search_sstable (path, tag);
                 results.insert (results.end (), disk_data.begin (), disk_data.end ());
             }
@@ -229,7 +232,9 @@ public:
      */
     bool start_server ()
     {
-        start_debug_thread ();
+        if (debug)
+            start_debug_thread ();
+
         start_flush_thread ();
 
         // Listen

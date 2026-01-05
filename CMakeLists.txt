@@ -6,7 +6,7 @@ set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package (Threads REQUIRED)
-include_directories (include)
+include_directories (include external config)
 
 # load gen exe
 add_executable (load_gen tools/load_gen.cpp)
@@ -18,6 +18,12 @@ target_link_libraries (tsdb_server PRIVATE Threads::Threads)
 
 # Unit test exe
 add_executable (unit_tests tests/unit_tests.cpp)
+
+# Disk cleaner
+add_custom_target (wipe
+    COMMAND ${CMAKE_COMMAND} -E echo "Cleaning disk/**/*.wal and disk/**/*.db"
+    COMMAND find ${CMAKE_SOURCE_DIR}/disk -type f -name "*.wal" -delete
+    COMMAND find  ${CMAKE_SOURCE_DIR}/disk -type f -name "*.db"  -delete)
 
 # Compiler optimizations for high-throughput testing
 if (MSVC)

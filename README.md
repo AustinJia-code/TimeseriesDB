@@ -7,7 +7,7 @@ Queries (`read` endpoint with device `tag`) return data from both long-term stor
 
 ### Build:
 ```
-mkdir build && cd build
+cd build
 cmake ..
 make
 ```
@@ -16,3 +16,6 @@ make
 * Terminal 1: `./tsdb_server`
 * Terminal 2: `./load_gen`
 * Sample CLI poll: `curl -s "http://localhost:9090/read?tag=device_1" | python3 -m json.tool`
+
+### Make
+```make wipe``` - clear .wal and .db from disk
