@@ -121,9 +121,9 @@ public:
             out.write (reinterpret_cast<const char*> (&compressed_bytes), sizeof (compressed_bytes));
 
             // Write gorilla
-            out.write (reinterpret_cast<const char*> (&compressed_bytes), sizeof (compressed_bytes));
+            out.write (reinterpret_cast<const char*> (compressed_buf.data ()), compressed_bytes);
 
-            size_t raw_size = num_pts * sizeof (data);
+            size_t raw_size = num_pts * sizeof (Data);
             double ratio = (static_cast<double> (compressed_bytes) / raw_size) * 100.0;
             
             if (debug)

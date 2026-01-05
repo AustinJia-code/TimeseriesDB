@@ -198,12 +198,12 @@ public:
             std::vector<Data> results = mem_db.get_data (tag);
 
             // Scan all files from db (TODO: optimize)
-            for (int i = 0; i < batch_id.load (); ++i)
-            {
-                std::string path = get_sstable_path (std::to_string (i));
-                std::vector<Data> disk_data = search_sstable (path, tag);
-                results.insert (results.end (), disk_data.begin (), disk_data.end ());
-            }
+            // for (int i = 0; i < batch_id.load (); ++i)
+            // {
+            //     std::string path = get_sstable_path (std::to_string (i));
+            //     std::vector<Data> disk_data = search_sstable (path, tag);
+            //     results.insert (results.end (), disk_data.begin (), disk_data.end ());
+            // }
 
             // Format as json
             std::ostringstream oss;
@@ -212,7 +212,7 @@ public:
             for (size_t i = 0; i < results.size (); ++i)
             {
                 oss << "    {\"ts\": " << results[i].time_ms << ",\n"
-                    << "    \"val\": " << std::fixed << std::setprecision (2) << results[i].value
+                    << "     \"val\": " << std::fixed << std::setprecision (2) << results[i].value << "\n"
                     << "    }";
                 
                 // Don't add a comma after the last element

@@ -178,19 +178,31 @@ function createChart(tag) {
             maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
-                tooltip: {
-                    mode: 'index',
-                    intersect: false,
-                    callbacks: {
-                        label: function(context) {
-                            return `Value: ${context.parsed.y.toFixed(2)}`;
-                        },
-                        title: function(context) {
-                            const timestamp = parseInt(context[0].label);
-                            return new Date(timestamp).toLocaleString();
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return `Value: ${context.parsed.y.toFixed(2)}`;
+                            },
+                            title: function(context) {
+                                const label = context[0].label;
+                                if (!label) return '';
+                                
+                                const timestamp = parseInt(label);
+                                if (isNaN(timestamp) || timestamp <= 0) {
+                                    return `Time: ${label}`;
+                                }
+                                
+                                const date = new Date(timestamp);
+                                if (isNaN(date.getTime())) {
+                                    return `Time: ${label}`;
+                                }
+                                
+                                return date.toLocaleString();
+                            }
                         }
                     }
-                }
             },
             scales: {
                 x: {
@@ -202,7 +214,17 @@ function createChart(tag) {
                         callback: function(value, index) {
                             const label = this.getLabelForValue(value);
                             if (!label) return '';
-                            const date = new Date(parseInt(label));
+                            
+                            const timestamp = parseInt(label);
+                            if (isNaN(timestamp) || timestamp <= 0) {
+                                return label;
+                            }
+                            
+                            const date = new Date(timestamp);
+                            if (isNaN(date.getTime())) {
+                                return label;
+                            }
+                            
                             return date.toLocaleTimeString();
                         }
                     },
@@ -256,12 +278,55 @@ function updateChart(tag, data) {
 
     const chart = charts[tag];
     
+    // Filter out invalid data points
+    data = data.filter(d => {
+        // Check if timestamp is valid (positive number)
+        if (typeof d.ts !== 'number' || isNaN(d.ts) || d.ts <= 0) {
+            console.warn(`Invalid timestamp for ${tag}:`, d.ts);
+            return false;
+        }
+        // Check if value is valid
+        if (typeof d.val !== 'number' || isNaN(d.val)) {
+            console.warn(`Invalid value for ${tag}:`, d.val);
+            return false;
+        }
+        return true;
+    });
+    
+    if (data.length === 0) {
+        console.warn(`No valid data points for ${tag}`);
+        return;
+    }
+    
     // Sort data by timestamp
     data.sort((a, b) => a.ts - b.ts);
 
-    // Extract timestamps and values
-    const timestamps = data.map(d => d.ts.toString());
-    const values = data.map(d => d.val);
+    // Extract timestamps and values (ensure timestamps are valid)
+    const timestamps = data.map(d => {
+        // Handle both number and string timestamps
+        const ts = typeof d.ts === 'number' ? d.ts : parseInt(d.ts);
+        if (isNaN(ts) || ts <= 0) {
+            console.warn(`Invalid timestamp in mapping for ${tag}:`, d.ts, 'Full data:', d);
+            return Date.now().toString(); // Fallback to current time
+        }
+        // Check if timestamp is reasonable (not a value that got swapped)
+        if (ts < 1000000000) { // Less than year 2001 in ms
+            console.warn(`Suspiciously small timestamp for ${tag}:`, ts, 'Full data:', d);
+        }
+        if (ts > 9999999999999) { // More than year 2286
+            console.warn(`Suspiciously large timestamp for ${tag}:`, ts, 'Full data:', d);
+        }
+        return ts.toString();
+    });
+    
+    const values = data.map(d => {
+        const val = typeof d.val === 'number' ? d.val : parseFloat(d.val);
+        // Check if value looks like a timestamp (very large number)
+        if (val > 1000000000000) {
+            console.warn(`Value looks like timestamp for ${tag}:`, val, 'Full data:', d);
+        }
+        return val;
+    });
 
     // Keep only the last MAX_DATA_POINTS
     if (timestamps.length > MAX_DATA_POINTS) {
@@ -299,7 +364,35 @@ async function fetchSensorData(tag, apiUrl) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
-        const data = await response.json();
+        const text = await response.text();
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (parseError) {
+            console.error(`JSON parse error for ${tag}:`, parseError);
+            console.error('Response text:', text.substring(0, 500));
+            throw new Error(`Invalid JSON response: ${parseError.message}`);
+        }
+        
+        // Validate data structure
+        if (!Array.isArray(data)) {
+            console.error(`Invalid data format for ${tag}:`, data);
+            return null;
+        }
+        
+        // Log sample data for debugging
+        if (data.length > 0) {
+            console.log(`Sample data for ${tag}:`, data[0]);
+            // Check if fields are swapped
+            const first = data[0];
+            if (first.ts && typeof first.ts === 'number' && first.ts > 1000000000000) {
+                console.warn(`Large timestamp detected for ${tag}:`, first.ts);
+            }
+            if (first.val && typeof first.val === 'number' && first.val > 1000000000000) {
+                console.warn(`Large value detected for ${tag} (might be timestamp):`, first.val);
+            }
+        }
+        
         return data;
     } catch (error) {
         console.error(`Error fetching data for ${tag}:`, error.message);
