@@ -57,7 +57,8 @@ public:
                 last_leading_zeros != 0xFFFFFFFF)
             {
                 out.write_bit (0);
-                uint32_t last_trailing_zeros = 64 - last_leading_zeros - last_meaningful_len;
+                uint32_t last_trailing_zeros = 64 - last_leading_zeros
+                                                  - last_meaningful_len;
                 out.write_bits (xor_val >> last_trailing_zeros, last_meaningful_len);
             }
             else
@@ -127,7 +128,8 @@ public:
     /**
      * Decode
      */
-    std::vector<Data> decode (const std::vector<byte_t>& compressed_data, size_t num_points)
+    std::vector<Data> decode (const std::vector<byte_t>& compressed_data,
+                              size_t num_points)
     {
         if (num_points == 0)
             return {};
@@ -183,7 +185,8 @@ public:
                 }
 
                 uint64_t bits = reader.read_bits (last_meaningful_len);
-                uint64_t xor_val = bits << (64 - last_leading_zeros - last_meaningful_len);
+                uint64_t xor_val = bits << (64 - last_leading_zeros
+                                               - last_meaningful_len);
                 last_val_bits ^= xor_val;
             }
 

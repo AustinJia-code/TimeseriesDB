@@ -5,8 +5,11 @@
 #include <sstream>
 #include <filesystem>
 #include <regex>
+#include <set>
 #include "types.h"
 #include "tsdb_config.h"
+
+using namespace config;
 
 /**
  * Get next batch id to write
@@ -99,7 +102,7 @@ private:
     /**
      * Search an sstable for tag
      */
-    std::vector<Data> search_sstable (const std::string& path, const std::string& tag) const
+    std::vector<Data> search_sstable (const std::string& path, const tag_t& tag) const
     {
         std::ifstream in (path, std::ios::binary);
 
@@ -165,13 +168,13 @@ public:
             while (std::getline (package, part, ','))
                 parts.push_back (part);
 
-            // Expect device_id, timestamp, value
+            // Expect device_tag, timestamp, value
             if (parts.size () != 3)
                 res.status = httplib::StatusCode::BadRequest_400;
             else
             {
                 // Parse package
-                std::string tag = "device_" + parts[0];
+                std::string tag = parts[0];
                 time_t time_ms = std::stoll (parts[1]);
                 data_t val = std::stod (parts[2]);
 
@@ -224,6 +227,35 @@ public:
             res.set_content (oss.str (), "application/json");
         });
 
+        // Build tags endpoint to list all available tags
+        server.Get ("/tags", [&] (const httplib::Request& req, 
+                                        httplib::Response& res)
+        {
+            res.set_header("Access-Control-Allow-Origin", "*");
+
+            // Get tags from memtable
+            std::set<std::string> tags;
+            
+            // Get tags from memory
+            const std::set<std::string> mem_tags = mem_db.get_tags ();
+            for (const auto& tag : mem_tags)
+                tags.insert (tag);
+
+            // Format as json array
+            std::ostringstream oss;
+            oss << "[";
+            bool first = true;
+            for (const auto& tag : tags)
+            {
+                if (!first) oss << ",";
+                oss << "\"" << tag << "\"";
+                first = false;
+            }
+            oss << "]";
+            
+            res.set_content (oss.str (), "application/json");
+        });
+
         return EXIT_SUCCESS;
     }
 
@@ -238,12 +270,14 @@ public:
         start_flush_thread ();
 
         // Listen
-        if (!server.listen ("0.0.0.0", 9090))
+        if (!server.listen (host, port))
         {
-            std::cerr << "Error: Could not bind to port 9090" << std::endl;
+            std::cerr << "Error: Could not bind to port " << std::to_string (port)
+                      << std::endl;
             return EXIT_FAILURE;
         }
-        std::cout << "TimeseriesDB started at http://0.0.0.0:9090" << std::endl;
+        std::cout << "TimeseriesDB started at http://" << host << ":"
+                  << std::to_string (port) << std::endl;
 
         return EXIT_SUCCESS;
     }

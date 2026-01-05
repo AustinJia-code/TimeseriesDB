@@ -5,6 +5,7 @@
 #include <string>
 #include <iostream>
 
+using tag_t     = std::string;
 using id_t      = uint32_t;
 using data_t    = double;
 using byte_t    = uint8_t;

@@ -7,6 +7,8 @@
 #include "types.h"
 #include "tsdb_config.h"
 
+using namespace config;
+
 /**
  * Write ahead log for memtable persistence
  */
@@ -36,7 +38,7 @@ public:
     /**
      * Write raw bytes to disk
      */
-    void append (std::string tag, time_t time_ms, data_t val)
+    void append (const tag_t& tag, time_t time_ms, const data_t& val)
     {
         std::lock_guard<std::mutex> lock (write_lock);
         if (!file.is_open ())

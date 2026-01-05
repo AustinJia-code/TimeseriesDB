@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSDB Sensor Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>TSDB Dashboard</h1>
+                <div class="status-badge" id="status-badge">
+                    <span class="status-dot"></span>
+                    <span id="status-text">Disconnected</span>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Configuration</h3>
+                <div class="form-group">
+                    <label for="api-url">API Endpoint</label>
+                    <input type="text" id="api-url" value="http://localhost:9090" placeholder="http://localhost:9090">
+                </div>
+                <div class="form-group">
+                    <label for="poll-interval">Poll Interval (ms)</label>
+                    <input type="number" id="poll-interval" value="1000" min="100" max="10000" step="100">
+                </div>
+                <div class="button-group">
+                    <button id="test-connection-btn" class="btn btn-secondary">Test Connection</button>
+                    <button id="start-stop-btn" class="btn btn-primary">Start Polling</button>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="section-header">
+                    <h3>Available Tags</h3>
+                    <button id="refresh-tags-btn" class="icon-btn" title="Refresh tags">🔄</button>
+                </div>
+                <div id="tags-container" class="tags-container">
+                    <div class="loading-tags">Loading tags...</div>
+                </div>
+            </div>
+
+            <div id="error-message" class="error-message" style="display: none;"></div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <h2>Sensor Data Visualization</h2>
+                <div class="header-actions">
+                    <span id="selected-count" class="badge">0 tags selected</span>
+                </div>
+            </header>
+
+            <div id="charts-container" class="charts-grid">
+                <div class="empty-state">
+                    <div class="empty-icon">📊</div>
+                    <h3>No Tags Selected</h3>
+                    <p>Select tags from the sidebar to view their data</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>

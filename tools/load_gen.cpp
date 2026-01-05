@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <httplib.h>
 #include "types.h"
+#include "tsdb_config.h"
 
 /**
  * Class for device gen functions
@@ -14,20 +15,14 @@
 class LoadGenerator
 {
 private:
-    std::string address;
+    std::string host;
     int port;
 
 public:
     /**
-     * Default (0.0.0.0:8080)
+     * Default constructor
      */
-    LoadGenerator () : address ("0.0.0.0"), port (9090) {} 
-
-    /**
-     * Custom endpoint (address:port)
-     */
-    LoadGenerator (const std::string& address, id_t port) :
-        address (address), port (port) {}
+    LoadGenerator () : host (config::host), port (config::port) {} 
 
     /**
      * Get sine wave value based on current time and sine wave
@@ -36,7 +31,8 @@ public:
      * period_ms: period
      * time_ms: current time ms
      */
-    data_t get_sine_wave (data_t base, data_t amplitude, time_t period_ms, time_t time_ms)
+    data_t get_sine_wave (data_t base, data_t amplitude, time_t period_ms,
+                          time_t time_ms)
     {
         return base + amplitude * std::sin ((2.0 * M_PI * time_ms) / period_ms);
     }
@@ -58,7 +54,8 @@ public:
      * device_id: device id for current device
      * total_count: shared counter for number of data points output by devices
      */
-    void start_worker (id_t device_id, time_t rate_ms, std::atomic<size_t>& total_count,
+    void start_worker (tag_t device_tag, time_t rate_ms,
+                       std::atomic<size_t>& total_count,
                        std::function<data_t (time_t)> generator_func)
     {
         while (true)
@@ -71,10 +68,10 @@ public:
             data_t data = generator_func (now_ms);
             
             // Post
-            std::string payload = std::to_string (device_id) + "," +
+            std::string payload = device_tag + "," +
                                   std::to_string (now_ms) + "," +
                                   std::to_string (data);
-            httplib::Client client (address, port);
+            httplib::Client client (host, port);
             httplib::Result res = client.Post ("/write", payload, "text/plain");
 
             if (res && res->status == httplib::StatusCode::OK_200)
@@ -95,34 +92,34 @@ int main ()
 {
     LoadGenerator lg;
     std::atomic<size_t> total_count (0);
-    std::vector<std::thread> threads;
+    std::vector<std::thread> sensor_threads;
 
     // Sine data (temperature, sound)
-    threads.emplace_back ([&] () {
-        lg.start_worker (id_t {1},
-                        time_t {1},
-                        total_count,
-                        [&](time_t t) {
+    sensor_threads.emplace_back ([&] () {
+        lg.start_worker (tag_t {"temp"},
+                         time_t {1},
+                         total_count,
+                         [&](time_t t) {
                             return lg.get_sine_wave (data_t {25.0},
                                                      data_t {5.0},
                                                      time_t {60000},
                                                      t);});});
     // Sawtooth data (counter, encoder)
-    threads.emplace_back ([&] () {
-        lg.start_worker (id_t {2},
-                        time_t {2},
-                        total_count,
-                        [&](time_t t) {
+    sensor_threads.emplace_back ([&] () {
+        lg.start_worker (tag_t {"encoder"},
+                         time_t {2},
+                         total_count,
+                         [&](time_t t) {
                             return lg.get_sawtooth (data_t {2.0},
                                                     data_t {19.0},
                                                     time_t {4000},
                                                     t);});});
     // Random noise
-    threads.emplace_back ([&] () {
-        lg.start_worker (id_t {3},
-                        time_t {3},
-                        total_count,
-                        [&](time_t unused) {
+    sensor_threads.emplace_back ([&] () {
+        lg.start_worker (tag_t {"noise"},
+                         time_t {3},
+                         total_count,
+                         [&](time_t unused) {
                             return static_cast<double> (rand () % 10);});});
 
     // Reporter
@@ -135,8 +132,8 @@ int main ()
         }
     });
 
-    for (std::thread& t : threads)
-        t.join ();
+    for (std::thread& sensor_t : sensor_threads)
+        sensor_t.join ();
     
     return EXIT_SUCCESS;
 }

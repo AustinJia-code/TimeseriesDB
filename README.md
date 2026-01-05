@@ -17,5 +17,7 @@ make
 * Terminal 2: `./load_gen`
 * Sample CLI poll: `curl -s "http://localhost:9090/read?tag=device_1" | python3 -m json.tool`
 
+* See how to run vibe-coded dashboard in ```./dashboard/README.md``` :).
+
 ### Make
 ```make wipe``` - clear .wal and .db from disk

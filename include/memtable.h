@@ -2,6 +2,7 @@
 
 #include <map>
 #include <vector>
+#include <set>
 #include <string>
 #include <shared_mutex>
 #include <iostream>
@@ -11,6 +12,8 @@
 #include "bit_buffer.h"
 #include "gorilla.h"
 #include "tsdb_config.h"
+
+using namespace config;
 
 /**
  * Thread-safe memory storage
@@ -26,10 +29,11 @@ public:
     /**
      * Insert data into the MemTable
      */
-    void insert (const std::string& tag, time_t time_ms, data_t val)
+    void insert (const tag_t& tag, time_t time_ms, data_t val)
     {
         // Single writer
         std::unique_lock lock (mutex);
+
         table[tag].push_back (Data {time_ms, val});
         ++total_count;
     }
@@ -49,6 +53,7 @@ public:
     {
         // Multi reader
         std::shared_lock lock (mutex);
+
         if (table.find (tag) != table.end ())
             return table.at (tag).size ();
         
@@ -60,10 +65,11 @@ public:
      */
     table_t extract ()
     {
+        // Single writer
         std::unique_lock lock (mutex);
+
         table_t snapshot = std::move (table);
         table.clear ();
-        
         total_count.store (0);
 
         return snapshot;
@@ -74,6 +80,9 @@ public:
      */
     std::vector<Data> get_data (const std::string& tag) const
     {
+        // Multi reader
+        std::shared_lock lock (mutex);
+
         std::vector<Data> result {table.at (tag)};
         return result;
     }
@@ -126,6 +135,22 @@ public:
             std::cout << std::endl;
             
         out.close ();
+    }
+
+    /**
+     * Get all tags in the memtable
+     */
+    const std::set<std::string> get_tags () const
+    {
+        // Multi reader
+        std::shared_lock lock (mutex);
+
+        std::set<std::string> tags;
+        for (const auto& [tag, data] : table)
+            if (!data.empty ())
+                tags.insert (tag);
+
+        return tags;
     }
 
     /**
