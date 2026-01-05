@@ -1,4 +1,4 @@
 /build/*
 !/build/.gitkeep
-/disk/data.wal
-/disk/sstables/*.db
+/disk/**/*.wal
+/disk/**/*.db
