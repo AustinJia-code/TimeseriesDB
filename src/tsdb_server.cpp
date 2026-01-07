@@ -59,7 +59,7 @@ private:
             while (running.load ())
             {
                 std::this_thread::sleep_for (std::chrono::seconds (1));
-                // Clear terminal and print to your screen
+                // Clear terminal and print to screen
                 mem_db.print ();
                 std::cout << std::endl;
             }

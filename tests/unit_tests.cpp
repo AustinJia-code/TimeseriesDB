@@ -41,9 +41,27 @@ void test_gorilla_logic ()
         std::cout << "SUCCESS: Gorilla round-trip perfect!" << std::endl;
 }
 
+void test_cold_store ()
+{
+    std::cout << "FAIL" << std::endl;
+}
+
+void test_mem_get ()
+{
+    std::cout << "FAIL" << std::endl;
+}
+
+void test_cold_get ()
+{
+    std::cout << "FAIL" << std::endl;
+}
+
 int main ()
 {
     test_gorilla_logic ();
+    test_cold_store ();
+    test_mem_get ();
+    test_cold_get ();
 
     return EXIT_SUCCESS;
 }

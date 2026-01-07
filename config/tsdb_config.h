@@ -20,7 +20,7 @@ namespace config
     // # bytes before WAL flush
     static constexpr size_t memtable_bytes =    1 * (1 << 20);
 
-    const std::string get_sstable_path (const std::string id)
+    const std::string get_sstable_path (const std::string& id)
     {
         return sstable_path + id + ".db";
     }
